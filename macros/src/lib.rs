@@ -156,7 +156,7 @@ fn reconstruct(input: TokenStream) -> String {
             }
 
             Some(Ident(ident)) => {
-                
+
                 output.push_str(&ident.to_string());
                 output.push(' ');
             }
@@ -194,7 +194,7 @@ fn reconstruct(input: TokenStream) -> String {
 
             Some(token) => {
                 output.push_str(&token.to_string());
-                if token.to_string() == "\"C\"" {
+                if token.to_string() == "\"C\"" { //this is a special case because on windows-gnu it expects a space between extern "C" [return type]
                     output.push(' ');   
                 }
             }

@@ -47,17 +47,11 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::err
 
     
     let host = target_lexicon::HOST.to_string();
-    
-    
-    
 
     let target = match variables.get("TARGET") {
         Some(val) => val.clone(),
         None => host.clone(),
     };
-
-    println!("{}", host);
-    println!("{}", target);
 
     let msvc = target.contains("msvc");
 
@@ -150,7 +144,7 @@ fn collect_environment_variables<'p>(program: &'p str) -> (Cow<'p, str>, HashMap
 
     lazy_static! {
         static ref REGEX: Regex = Regex::new(
-            r#"#inline_c_rs (?P<variable_name>[^:]+):\s*"(?P<variable_value>[^"]+)"\r?\n"#
+            r#"#inline_c_rs (?P<variable_name>[^:\n\r]+):\s*"(?P<variable_value>[^"]+)""#
         )
         .unwrap();
     }
@@ -194,6 +188,7 @@ fn collect_options<'p>(program: &'p str) -> (Cow<'p, str>, Vec<String>){
     }
 
     let mut options = Vec::new();
+    
 
     for captures in REGEX_NO_VAL.captures_iter(&program) {
         options.push(captures["variable_name"].trim().to_string());
