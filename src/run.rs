@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
     borrow::Cow, collections::HashMap, env, error::Error, ffi::OsString, io::prelude::*,
-    path::PathBuf, process::Command,
+    path::PathBuf, process::Command, fmt::Display, fmt,
 };
 
 #[doc(hidden)]
@@ -11,6 +11,18 @@ pub enum Language {
     C,
     Cxx,
 }
+
+#[derive(Debug)]
+pub struct CompilationError(String);
+
+impl Display for CompilationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0);
+        fmt::Result::Ok(())
+    }
+}
+
+impl std::error::Error for CompilationError {}
 
 impl ToString for Language {
     fn to_string(&self) -> String {
@@ -22,8 +34,10 @@ impl ToString for Language {
 }
 
 #[doc(hidden)]
-pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn Error>> {
+pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::error::Error>> {
     let (program, variables) = collect_environment_variables(program);
+    let (program, options) = collect_options(&program);
+
 
     let mut program_file = tempfile::Builder::new()
         .prefix("inline-c-rs-")
@@ -31,10 +45,22 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn Error>> 
         .tempfile()?;
     program_file.write_all(program.as_bytes())?;
 
+    
     let host = target_lexicon::HOST.to_string();
-    let target = &host;
+    
+    
+    
+
+    let target = match variables.get("TARGET") {
+        Some(val) => val.clone(),
+        None => host.clone(),
+    };
+
+    println!("{}", host);
+    println!("{}", target);
 
     let msvc = target.contains("msvc");
+
 
     let (_, input_path) = program_file.keep()?;
     let mut output_temp = tempfile::Builder::new();
@@ -51,10 +77,9 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn Error>> 
         .cargo_metadata(false)
         .warnings(true)
         .extra_warnings(true)
-        .warnings_into_errors(true)
         .debug(false)
         .host(&host)
-        .target(target)
+        .target(&target)
         .opt_level(1);
 
     if let Language::Cxx = language {
@@ -82,23 +107,36 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn Error>> 
 
         command.arg(input_path.clone()); // the input must come first
         command.args(compiler.args());
+
+        if options.contains(&"SHARED".to_string()){
+            command.arg("-shared");
+        }
+
+
         command_add_compiler_flags(&mut command, &variables);
         command_add_output_file(&mut command, &output_path, msvc, compiler.is_like_clang());
     }
 
+    println!("{:?}", command);
+
+
     command.envs(variables.clone());
 
-    let mut files_to_remove = vec![input_path, output_path.clone()];
+
+    let mut files_to_remove = vec![input_path.clone(), output_path.clone()];
     if msvc {
         let mut intermediate_path = output_path.clone();
         intermediate_path.set_extension("obj");
         files_to_remove.push(intermediate_path);
+    
     }
 
     let clang_output = command.output()?;
 
+
     if !clang_output.status.success() {
-        return Ok(Assert::new(command, Some(files_to_remove), output_path));
+        
+        return Err(Box::new(CompilationError(String::from_utf8(clang_output.stderr).expect("Our bytes should be valid utf8"))));
     }
 
     let mut command = Command::new(output_path.clone());
@@ -118,6 +156,7 @@ fn collect_environment_variables<'p>(program: &'p str) -> (Cow<'p, str>, HashMap
     }
 
     let mut variables = HashMap::new();
+    
 
     for (variable_name, variable_value) in env::vars().filter_map(|(mut name, value)| {
         if name.starts_with(ENV_VAR_PREFIX) {
@@ -136,9 +175,36 @@ fn collect_environment_variables<'p>(program: &'p str) -> (Cow<'p, str>, HashMap
         );
     }
 
+
     let program = REGEX.replace_all(program, "");
 
+    
+
+    println!("{:?}", variables);
+    
     (program, variables)
+}
+
+fn collect_options<'p>(program: &'p str) -> (Cow<'p, str>, Vec<String>){
+    lazy_static! {
+        static ref REGEX_NO_VAL: Regex = Regex::new(
+            r#"#inline_c_rs (?P<variable_name>\w+)"#
+        )
+        .unwrap();
+    }
+
+    let mut options = Vec::new();
+
+    for captures in REGEX_NO_VAL.captures_iter(&program) {
+        options.push(captures["variable_name"].trim().to_string());
+    }
+
+    let program = REGEX_NO_VAL.replace_all(&program, "");
+
+    println!("{:?}", options);
+
+    (program, options)
+
 }
 
 // This is copy-pasted and edited from `cc-rs`.

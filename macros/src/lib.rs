@@ -156,6 +156,7 @@ fn reconstruct(input: TokenStream) -> String {
             }
 
             Some(Ident(ident)) => {
+                
                 output.push_str(&ident.to_string());
                 output.push(' ');
             }
@@ -176,6 +177,7 @@ fn reconstruct(input: TokenStream) -> String {
                         output.push_str(&group_output);
                         output.push('\n');
                         output.push('}');
+                        output.push('\n');
                     }
 
                     Delimiter::Bracket => {
@@ -192,6 +194,9 @@ fn reconstruct(input: TokenStream) -> String {
 
             Some(token) => {
                 output.push_str(&token.to_string());
+                if token.to_string() == "\"C\"" {
+                    output.push(' ');   
+                }
             }
 
             None => break,

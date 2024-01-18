@@ -34,6 +34,18 @@ impl Assert {
     pub fn output_path(&self) -> &PathBuf {
         &self.output_path
     }
+
+    pub fn arch(arch: String) {
+
+    }
+
+    pub fn dynamic_library() {
+
+    }
+    ///Add flags
+    pub fn flags(flags: Vec<String>) {
+
+    }
 }
 
 impl Drop for Assert {
