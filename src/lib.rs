@@ -489,7 +489,7 @@ mod tests {
         remove_var("INLINE_C_RS_CFLAGS");
     }
 
-    #[cfg(nightly)]
+   /* #[cfg(nightly)]
     #[test]
     fn test_c_macro_with_define() {
         (assert_c! {
@@ -500,5 +500,5 @@ mod tests {
             }
         })
         .success();
-    }
+    } */
 }

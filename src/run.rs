@@ -2,7 +2,7 @@ use crate::assert::Assert;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
-    borrow::Cow, collections::HashMap, env, error::Error, ffi::OsString, io::prelude::*,
+    borrow::Cow, collections::HashMap, env, ffi::OsString, io::prelude::*,
     path::PathBuf, process::Command, fmt::Display, fmt,
 };
 
@@ -17,7 +17,7 @@ pub struct CompilationError(String);
 
 impl Display for CompilationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0);
+        write!(f, "{}", self.0)?;
         fmt::Result::Ok(())
     }
 }
@@ -37,7 +37,7 @@ impl ToString for Language {
 pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::error::Error>> {
     let (program, variables) = collect_environment_variables(program);
     let (program, options) = collect_options(&program);
-
+    let is_shared = options.contains(&"SHARED".to_string());
 
     let mut program_file = tempfile::Builder::new()
         .prefix("inline-c-rs-")
@@ -60,7 +60,9 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::err
     let mut output_temp = tempfile::Builder::new();
     let output_temp = output_temp.prefix("inline-c-rs-");
 
-    if msvc {
+    if target.contains("windows") && is_shared { //this is to encompass both msvc + mingw
+        output_temp.suffix(".dll");
+    } else if target.contains("windows") {
         output_temp.suffix(".exe");
     }
 
@@ -89,10 +91,12 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::err
     let compiler = build.try_get_compiler()?;
     let mut command;
 
+    
+
     if msvc {
         command = compiler.to_command();
 
-        command_add_compiler_flags(&mut command, &variables);
+        command_add_compiler_flags(&mut command, &variables, is_shared, &target);
         command_add_output_file(&mut command, &output_path, msvc, compiler.is_like_clang());
         command.arg(input_path.clone());
         command.envs(variables.clone());
@@ -102,17 +106,10 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::err
         command.arg(input_path.clone()); // the input must come first
         command.args(compiler.args());
 
-        if options.contains(&"SHARED".to_string()){
-            command.arg("-shared");
-        }
 
-
-        command_add_compiler_flags(&mut command, &variables);
+        command_add_compiler_flags(&mut command, &variables, is_shared, &target);
         command_add_output_file(&mut command, &output_path, msvc, compiler.is_like_clang());
     }
-
-    println!("{:?}", command);
-
 
     command.envs(variables.clone());
 
@@ -126,6 +123,7 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::err
     }
 
     let clang_output = command.output()?;
+    
 
 
     if !clang_output.status.success() {
@@ -171,10 +169,6 @@ fn collect_environment_variables<'p>(program: &'p str) -> (Cow<'p, str>, HashMap
 
 
     let program = REGEX.replace_all(program, "");
-
-    
-
-    println!("{:?}", variables);
     
     (program, variables)
 }
@@ -195,8 +189,6 @@ fn collect_options<'p>(program: &'p str) -> (Cow<'p, str>, Vec<String>){
     }
 
     let program = REGEX_NO_VAL.replace_all(&program, "");
-
-    println!("{:?}", options);
 
     (program, options)
 
@@ -220,7 +212,7 @@ fn command_add_output_file(command: &mut Command, output_path: &PathBuf, msvc: b
     }
 }
 
-fn command_add_compiler_flags(command: &mut Command, variables: &HashMap<String, String>) {
+fn command_add_compiler_flags(command: &mut Command, variables: &HashMap<String, String>, is_shared: bool, target: &String) {
     let get_env_flags = |env_name: &str| -> Vec<String> {
         variables
             .get(env_name)
@@ -235,6 +227,20 @@ fn command_add_compiler_flags(command: &mut Command, variables: &HashMap<String,
     command.args(get_env_flags("CFLAGS"));
     command.args(get_env_flags("CPPFLAGS"));
     command.args(get_env_flags("CXXFLAGS"));
+
+
+    if is_shared{ //are we trying to create a shared library
+        if target.contains("windows") && target.contains("msvc"){
+            //msvc
+        }else {
+            //unix/mingw
+            command.arg("-shared");
+        }
+        
+        
+
+        
+    }
 
     for linker_argument in get_env_flags("LDFLAGS") {
         command.arg(format!("-Wl,{}", linker_argument));
