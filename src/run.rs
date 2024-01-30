@@ -224,6 +224,7 @@ fn command_add_compiler_flags(
         //are we trying to create a shared library
         if target.contains("windows") && target.contains("msvc") {
             //msvc
+            command.arg("/LD");
         } else {
             //unix/mingw
             command.arg("-shared");
