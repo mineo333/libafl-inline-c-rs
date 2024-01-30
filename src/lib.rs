@@ -341,7 +341,7 @@ mod run;
 
 pub use crate::run::{run, Language};
 pub use assert::Assert;
-pub use inline_c_macro::{assert_c, assert_cxx};
+pub use libafl_inline_c_macro::{assert_c, assert_cxx};
 pub mod predicates {
     //! Re-export the prelude of the `predicates` crate, which is useful for assertions.
     //!

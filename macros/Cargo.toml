@@ -1,11 +1,11 @@
 [package]
-name = "inline-c-macro"
+name = "libafl_inline_c_macro"
 version = "0.1.6"
-description = "The macros for the `inline-c` crate, that allows to write and execute C code inside Rust"
+description = "The macros for the `libafl_inline_c` crate"
 license = "BSD-3-Clause"
-authors = ["Ivan Enderlin <ivan@mnt.io>"]
-repository = "https://github.com/Hywan/inline-c-rs"
-homepage = "https://github.com/Hywan/inline-c-rs"
+authors = ["Sharad Khanna <ivan@mnt.io>"]
+repository = "https://github.com/mineo333/libafl-inline-c-rs"
+homepage = "https://github.com/mineo333/libafl-inline-c-rs"
 readme = "README.md"
 categories = ["development-tools::testing"]
 keywords = ["test", "c", "cpp"]
