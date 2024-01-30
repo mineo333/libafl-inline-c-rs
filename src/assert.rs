@@ -9,11 +9,15 @@ pub struct Assert {
 }
 
 impl Assert {
-    pub(crate) fn new(command: Command, files_to_remove: Option<Vec<PathBuf>>, output_path: PathBuf) -> Self {
+    pub(crate) fn new(
+        command: Command,
+        files_to_remove: Option<Vec<PathBuf>>,
+        output_path: PathBuf,
+    ) -> Self {
         Self {
             command: assert_cmd::Command::from_std(command),
             files_to_remove: files_to_remove,
-            output_path: output_path
+            output_path: output_path,
         }
     }
 

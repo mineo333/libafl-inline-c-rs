@@ -193,9 +193,9 @@ fn reconstruct(input: TokenStream) -> String {
 
             Some(token) => {
                 output.push_str(&token.to_string());
-                 //this is a special case because on windows targetting compilers it expects a space between extern "C" [return type]
+                //this is a special case because on windows targetting compilers it expects a space between extern "C" [return type]
                 if token.to_string() == "\"C\"" {
-                    output.push(' ');   
+                    output.push(' ');
                 }
             }
 
