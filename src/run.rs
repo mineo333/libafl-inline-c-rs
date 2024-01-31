@@ -39,6 +39,7 @@ pub fn run(language: Language, program: &str) -> Result<Assert, Box<dyn std::err
     let (program, options) = collect_options(&program);
     let is_shared = options.contains(&"SHARED".to_string());
 
+    //println!("{}", program);
     let mut program_file = tempfile::Builder::new()
         .prefix("inline-c-rs-")
         .suffix(&format!(".{}", language.to_string()))

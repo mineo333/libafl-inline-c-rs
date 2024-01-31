@@ -1,5 +1,5 @@
 //! Please see the `inline-c` crate to learn more.
-
+#![feature(proc_macro_span)]
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -104,25 +104,29 @@ fn reconstruct(input: TokenStream) -> String {
                                     None => panic!("`#include` must be followed by `<` or `\"`."),
                                 }
                             }
-
                             // #define, only available on nightly.
-                            Some(Ident(define)) if *define == "define" => {
+                            Some(Ident(define)) if *define == "define" || *define == "ifdef" || *define == "else" || *define == "endif" || *define == "elif" => {
                                 #[cfg(not(nightly))]
                                 panic!(
-                                    "`#define` in C is only supported in `inline-c` with Rust nightly"
+                                    "`#define` in C is only supported in `libafl_inline_c` with Rust nightly"
                                 );
 
                                 #[cfg(nightly)]
                                 {
-                                    let current_line = define.span().start().line;
+                                    let current_line = define.span().unwrap().start().line();
+                                    output.push_str(&define.to_string());
                                     iterator.next();
-                                    output.push_str("define ");
+
+                                    output.push(' ');
 
                                     loop {
                                         match iterator.peek() {
                                             Some(item) => {
-                                                if item.span().start().line == current_line {
+                                                if item.span().unwrap().start().line()
+                                                    == current_line
+                                                {
                                                     output.push_str(&item.to_string());
+                                                    output.push(' ');
                                                     iterator.next();
                                                 } else {
                                                     output.push('\n');
