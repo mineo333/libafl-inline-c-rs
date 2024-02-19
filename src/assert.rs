@@ -35,6 +35,7 @@ impl Assert {
         self.assert().failure()
     }
 
+    /// Return the path that the executable was compiled to. Useful for shared object/dll compilation. 
     pub fn output_path(&self) -> &PathBuf {
         &self.output_path
     }
